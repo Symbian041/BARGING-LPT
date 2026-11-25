@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PT Labai Persada Tambang - Dashboard Barging & Quality Control</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .table-container::-webkit-scrollbar { height: 6px; }
+        .table-container::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+        .logo-outline-white {
+            filter:
+                drop-shadow(2.5px 0px 0px #ffffff)
+                drop-shadow(-2.5px 0px 0px #ffffff)
+                drop-shadow(0px 2.5px 0px #ffffff)
+                drop-shadow(0px -2.5px 0px #ffffff)
+                drop-shadow(2px 2px 0px #ffffff)
+                drop-shadow(-2px -2px 0px #ffffff)
+                drop-shadow(2px -2px 0px #ffffff)
+                drop-shadow(-2px 2px 0px #ffffff);
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased">
+
+    <!-- Header -->
+    <header class="bg-slate-900 text-white sticky top-0 z-40">
+        <div class="max-w-[1400px] mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center justify-center h-20 w-28 sm:h-24 sm:w-32 shrink-0">
+                    <img 
+                        src="https://drive.google.com/thumbnail?id=1wBPTt9ueJomN0CXrbBxShDWq9HvEpqYS&sz=w800" 
+                        onerror="this.onerror=null; this.src='https://lh3.googleusercontent.com/d/1wBPTt9ueJomN0CXrbBxShDWq9HvEpqYS';" 
+                        alt="Logo PT Labai Persada Tambang" 
+                        class="h-full w-full object-contain logo-outline-white"
+                    >
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg sm:text-xl leading-tight tracking-wide">PT LABAI PERSADA TAMBANG</h1>
+                    <p class="text-xs text-slate-400">Barging Operations & Quality Control Dashboard</p>
+                </div>
+            </div>
+
+            <!-- Toolbar Buttons -->
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="button" onclick="fetchFromGAS()" class="bg-sky-600 hover:bg-sky-700 text-white text-xs font-medium px-3 py-2 flex items-center gap-1.5 shadow-sm transition rounded">
+                    <i id="refreshIcon" class="fa-solid fa-rotate"></i> <span id="refreshText">Refresh Data</span>
+                </button>
+                <button type="button" onclick="openModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-2 flex items-center gap-1.5 shadow-sm transition rounded">
+                    <i class="fa-solid fa-plus"></i> Input Baru
+                </button>
+                <button type="button" onclick="exportExcel()" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium px-3 py-2 flex items-center gap-1.5 shadow-sm transition rounded">
+                    <i class="fa-solid fa-file-export"></i> Export
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main id="capture-area" class="max-w-[1400px] mx-auto px-4 py-6 space-y-6">
+        
+        <!-- KPI Cards -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-5 border border-slate-200 shadow-sm border-l-4 border-l-blue-500 rounded-r">
+                <p class="text-[11px] font-semibold uppercase text-slate-500">Total Shipment</p>
+                <h3 class="text-2xl font-bold mt-1 text-slate-800" id="stat-total">0</h3>
+            </div>
+            <div class="bg-white p-5 border border-slate-200 shadow-sm border-l-4 border-l-emerald-500 rounded-r">
+                <p class="text-[11px] font-semibold uppercase text-slate-500">Cargo Loaded Final</p>
+                <h3 class="text-2xl font-bold mt-1 text-slate-800" id="stat-tonnage">0 <span class="text-xs font-normal text-slate-500">MT</span></h3>
+            </div>
+            <div class="bg-white p-5 border border-slate-200 shadow-sm border-l-4 border-l-amber-500 rounded-r">
+                <p class="text-[11px] font-semibold uppercase text-slate-500">Total Ritase Dump Truck</p>
+                <h3 class="text-2xl font-bold mt-1 text-slate-800" id="stat-ritase">0</h3>
+            </div>
+            <div class="bg-white p-5 border border-slate-200 shadow-sm border-l-4 border-l-indigo-500 rounded-r">
+                <p class="text-[11px] font-semibold uppercase text-slate-500">Selesai / Berlayar</p>
+                <h3 class="text-2xl font-bold mt-1 text-slate-800" id="stat-completed">0</h3>
+            </div>
+        </section>
+
+        <!-- PANEL FILTER -->
+        <section class="bg-white p-4 border border-slate-200 shadow-sm rounded flex flex-wrap items-end gap-3 no-print">
+            <div class="flex items-center text-slate-700 font-bold text-sm mr-2 pb-2">
+                <i class="fa-solid fa-filter mr-2"></i> Filter Data:
+            </div>
+            
+            <!-- Filter Bulanan -->
+            <div>
+                <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Periode Bulan</label>
+                <input type="month" id="filter_month" onchange="onMonthChange()" class="border border-slate-300 p-2 text-sm outline-none rounded focus:ring-1 focus:ring-blue-500 cursor-pointer">
+            </div>
+
+            <div class="flex items-center pb-3 px-2 text-slate-400 text-[10px] font-bold uppercase">Atau</div>
+
+            <!-- Filter Rentang Tanggal -->
+            <div>
+                <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Mulai Tgl</label>
+                <input type="date" id="filter_start" onchange="onDateRangeChange()" class="border border-slate-300 p-2 text-sm outline-none rounded focus:ring-1 focus:ring-blue-500 cursor-pointer">
+            </div>
+            <div>
+                <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Sampai Tgl</label>
+                <input type="date" id="filter_end" onchange="onDateRangeChange()" class="border border-slate-300 p-2 text-sm outline-none rounded focus:ring-1 focus:ring-blue-500 cursor-pointer">
+            </div>
+
+            <!-- Filter Mode Tampilan Kualitas -->
+            <div class="border-l border-slate-200 pl-4 ml-1">
+                <label class="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Tampilan COA (Kolom)</label>
+                <select id="filter_mode" onchange="applyFilters()" class="border border-slate-300 p-2 text-sm outline-none rounded focus:ring-1 focus:ring-blue-500 bg-white cursor-pointer">
+                    <option value="all">Semua (Barging & Discharge)</option>
+                    <option value="barging">Hanya Barging Saja</option>
+                    <option value="discharge">Hanya Discharge Saja</option>
+                </select>
+            </div>
+
+            <!-- Tombol Reset -->
+            <div class="ml-auto">
+                <button type="button" onclick="resetFilters()" class="text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-xs font-medium px-4 py-2.5 border border-slate-300 rounded transition">
+                    <i class="fa-solid fa-xmark mr-1"></i> Reset
+                </button>
+            </div>
+        </section>
+
+        <!-- Charts -->
+        <section class="space-y-6">
+            <!-- Grafik Cargo -->
+            <div class="bg-white p-4 border border-slate-200 shadow-sm rounded w-full">
+                <h2 class="font-bold text-slate-800 text-sm mb-3">Grafik Cargo Loaded (MT)</h2>
+                <div class="relative w-full h-96"><canvas id="draftChart"></canvas></div>
+            </div>
+            
+            <!-- Grafik COA -->
+            <div class="bg-white p-4 border border-slate-200 shadow-sm rounded w-full">
+                <h2 class="font-bold text-slate-800 text-sm mb-3">Analisis Kualitas COA Kimia (%)</h2>
+                <div class="relative w-full h-[450px]"><canvas id="coaChart"></canvas></div>
+            </div>
+        </section>
+
+        <!-- Log Data Table -->
+        <section class="bg-white border border-slate-200 shadow-sm rounded overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                <h2 class="font-bold text-slate-800 text-sm">Log Data Operasional & Kualitas</h2>
+                <span class="text-xs text-slate-500 font-medium" id="record-count">0 Data Ditampilkan</span>
+            </div>
+            <div class="overflow-x-auto table-container">
+                <table class="w-full text-xs text-left border-collapse" id="bargingTable">
+                    <thead id="table-head" class="bg-slate-800 text-white uppercase text-[10px]">
+                        <!-- Tabel head dirender dinamis via JavaScript -->
+                    </thead>
+                    <tbody id="table-body" class="divide-y divide-slate-200"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Input Baru -->
+    <div id="shipmentModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white border border-slate-300 max-w-4xl w-full rounded shadow-xl flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b flex justify-between items-center bg-slate-50 rounded-t">
+                <div>
+                    <h3 class="text-base font-bold text-slate-800"><i class="fa-solid fa-file-circle-plus text-blue-600 mr-2"></i>Tambah Data Shipment Presisi</h3>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Semua kolom bersifat opsional — isi bagian yang tersedia lalu klik Simpan & Kirim.</p>
+                </div>
+                <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto">
+                <form id="dataForm" novalidate onsubmit="saveShipment(event)" class="space-y-6 text-xs">
+                    <!-- Detail Pengapalan -->
+                    <div>
+                        <h4 class="font-bold text-slate-700 border-b pb-1 mb-3">1. Identitas & Waktu Pengapalan</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block font-medium mb-1">No. Shipment</label>
+                                <input type="number" id="no_shipment" class="w-full border border-slate-300 p-2 focus:ring-1 focus:ring-blue-500 outline-none rounded">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block font-medium mb-1">Nama TB / Tongkang</label>
+                                <input type="text" id="nama_tb_tongkang" class="w-full border border-slate-300 p-2 focus:ring-1 focus:ring-blue-500 outline-none rounded">
+                            </div>
+                            <div>
+                                <label class="block font-medium mb-1">Tambat Tali (Tgl & Jam)</label>
+                                <input type="datetime-local" id="tambat_tali" class="w-full border border-slate-300 p-2 outline-none rounded focus:ring-1 focus:ring-blue-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detail Displacement -->
+                    <div class="bg-emerald-50/50 p-4 border border-emerald-100 rounded">
+                        <h4 class="font-bold text-emerald-800 border-b border-emerald-200 pb-1 mb-3">2. Net Displacement & Kargo</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block font-medium text-slate-700 mb-1">Net Displacement Initial</label>
+                                <input type="number" step="0.001" id="net_initial" oninput="calcCargo()" class="w-full border border-slate-300 p-2 outline-none rounded">
+                            </div>
+                            <div>
+                                <label class="block font-medium text-slate-700 mb-1">Net Displacement Final</label>
+                                <input type="number" step="0.001" id="net_final" oninput="calcCargo()" class="w-full border border-slate-300 p-2 outline-none rounded">
+                            </div>
+                            <div>
+                                <label class="block font-bold text-emerald-700 mb-1">Cargo Loaded (Otomatis)</label>
+                                <input type="number" step="0.001" id="cargo_loaded" readonly class="w-full border border-emerald-300 bg-emerald-100 p-2 font-bold text-emerald-900 outline-none cursor-not-allowed rounded">
+                            </div>
+                            <div>
+                                <label class="block font-medium text-slate-700 mb-1">Ritase DT</label>
+                                <input type="number" id="ritase_dt" class="w-full border border-slate-300 p-2 outline-none rounded">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Kualitas Kimia -->
+                    <div>
+                        <h4 class="font-bold text-slate-700 border-b pb-1 mb-3">3. Analisis Kualitas (COA)</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="p-3 bg-indigo-50/50 border border-indigo-100 rounded">
+                                <span class="font-bold text-indigo-800 block mb-2">COA Barging (%)</span>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div><label class="block mb-1 text-slate-600">Al₂O₃</label><input type="number" step="0.01" id="coa_b_al" class="w-full border p-2 rounded"></div>
+                                    <div><label class="block mb-1 text-slate-600">SiO₂</label><input type="number" step="0.01" id="coa_b_si" class="w-full border p-2 rounded"></div>
+                                    <div><label class="block mb-1 text-slate-600">R-SiO₂</label><input type="number" step="0.01" id="coa_b_rsi" class="w-full border p-2 rounded"></div>
+                                </div>
+                            </div>
+                            <div class="p-3 bg-cyan-50/50 border border-cyan-100 rounded">
+                                <span class="font-bold text-cyan-800 block mb-2">COA Discharge (%)</span>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div><label class="block mb-1 text-slate-600">Al₂O₃</label><input type="number" step="0.01" id="coa_d_al" class="w-full border p-2 rounded"></div>
+                                    <div><label class="block mb-1 text-slate-600">SiO₂</label><input type="number" step="0.01" id="coa_d_si" class="w-full border p-2 rounded"></div>
+                                    <div><label class="block mb-1 text-slate-600">R-SiO₂</label><input type="number" step="0.01" id="coa_d_rsi" class="w-full border p-2 rounded"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Waktu Penyelesaian -->
+                    <div>
+                        <h4 class="font-bold text-slate-700 border-b pb-1 mb-3">4. Milestone Keberangkatan</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block font-medium mb-1">Lepas Tali</label>
+                                <input type="datetime-local" id="lepas_tali" class="w-full border border-slate-300 p-2 outline-none rounded focus:ring-1 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block font-medium mb-1">Keberangkatan</label>
+                                <input type="datetime-local" id="keberangkatan" class="w-full border border-slate-300 p-2 outline-none rounded focus:ring-1 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block font-medium mb-1">Tujuan</label>
+                                <input type="text" id="tujuan" value="" class="w-full border border-slate-300 p-2 outline-none rounded focus:ring-1 focus:ring-blue-500">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t bg-slate-50 flex justify-end gap-3 rounded-b">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 border border-slate-300 text-slate-700 bg-white hover:bg-slate-100 font-medium rounded">Batal</button>
+                <button id="submitShipmentBtn" type="button" onclick="saveShipment(event)" class="px-5 py-2 bg-blue-600 text-white font-medium hover:bg-blue-700 shadow-sm rounded"><i class="fa-solid fa-cloud-arrow-up mr-2"></i>Simpan & Kirim</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script JavaScript Terintegrasi -->
+    <script>
+        // =========================================================================
+        // 1. KONFIGURASI & STATE APLIKASI
+        // =========================================================================
+        const APP_CONFIG = {
+            gasUrl: "https://script.google.com/macros/s/AKfycbzWn-ONjlzYyIpG5fZIHfupcHyRJjqFckaLabB7hIk_N3_cjhm--pcM-2N84G50AGqgJg/exec",
+            sheetName: "Barging",
+            syncDelayMs: 1200,
+            excelFilename: "Data_Barging_LPT.xlsx",
+            imageFilename: "Dashboard_Barging_LPT.png"
+        };
+
+        const appState = {
+            rawData: [],
+            filteredData: [],
+            charts: {
+                draft: null,
+                coa: null
+            }
+        };
+
+        const FORM_FIELD_IDS = [
+            "no_shipment",
+            "nama_tb_tongkang",
+            "tambat_tali",
+            "net_initial",
+            "net_final",
+            "cargo_loaded",
+            "ritase_dt",
+            "coa_b_al",
+            "coa_b_si",
+            "coa_b_rsi",
+            "coa_d_al",
+            "coa_d_si",
+            "coa_d_rsi",
+            "lepas_tali",
+            "keberangkatan",
+            "tujuan"
+        ];
+
+        // =========================================================================
+        // 2. UTILITAS FORMAT & KALKULASI
+        // =========================================================================
+        function parseNum(val) {
+            if (val === null || val === undefined || val === "" || val === "-") return 0;
+            if (typeof val === "number") return Number.isFinite(val) ? val : 0;
+            const cleaned = String(val).trim();
+            if (!cleaned) return 0;
+            const normalized = cleaned.includes(",")
+                ? cleaned.replace(/\./g, "").replace(",", ".")
+                : cleaned;
+            const parsed = parseFloat(normalized);
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function fmtDec(num) {
+            const parsed = parseNum(num);
+            if (parsed === 0) return "-";
+            return new Intl.NumberFormat("id-ID", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 3
+            }).format(parsed);
+        }
+
+        function fmtDateStr(isoString) {
+            if (!isoString) return "-";
+            const str = String(isoString);
+            return str.includes("T")
+                ? str.replace("T", '<br><span class="text-[10px] text-slate-400">') + "</span>"
+                : str;
+        }
+
+        function calcCargo() {
+            const initial = parseFloat(document.getElementById("net_initial").value);
+            const finalVal = parseFloat(document.getElementById("net_final").value);
+            const cargoInput = document.getElementById("cargo_loaded");
+
+            if (!Number.isNaN(initial) && !Number.isNaN(final)) {
+                const diff = finalVal - initial;
+                cargoInput.value = diff > 0 ? diff.toFixed(3) : "";
+            } else {
+                cargoInput.value = "";
+            }
+        }
+
+        // =========================================================================
+        // 3. SINKRONISASI GOOGLE APPS SCRIPT (GAS)
+        // =========================================================================
+        function setRefreshSpinning(isSpinning) {
+            const icon = document.getElementById("refreshIcon");
+            if (!icon) return;
+            icon.classList.toggle("fa-spin", isSpinning);
+        }
+
+        async function fetchFromGAS() {
+            if (!APP_CONFIG.gasUrl) {
+                applyFilters();
+                return;
+            }
+
+            setRefreshSpinning(true);
+            try {
+                const endpoint = new URL(APP_CONFIG.gasUrl);
+                endpoint.searchParams.set("sheet", APP_CONFIG.sheetName);
+                endpoint.searchParams.set("_t", Date.now().toString());
+
+                const response = await fetch(endpoint.toString(), {
+                    method: "GET",
+                    redirect: "follow"
+                });
+                const fetched = await response.json();
+                const rows = Array.isArray(fetched)
+                    ? fetched
+                    : Array.isArray(fetched?.data)
+                        ? fetched.data
+                        : [];
+                appState.rawData = rows;
+                applyFilters();
+            } catch (err) {
+                console.error("Gagal sinkronisasi data dari Google Sheets:", err);
+            } finally {
+                setRefreshSpinning(false);
+            }
+        }
+
+        async function postPayloadToGAS(payload) {
+            await fetch(APP_CONFIG.gasUrl, {
+                method: "POST",
+                mode: "no-cors",
+                redirect: "follow",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(payload)
+            });
+        }
+
+        // =========================================================================
+        // 4. LOGIKA FILTER DATA
+        // =========================================================================
+        function onMonthChange() {
+            document.getElementById("filter_start").value = "";
+            document.getElementById("filter_end").value = "";
+            applyFilters();
+        }
+
+        function onDateRangeChange() {
+            document.getElementById("filter_month").value = "";
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const startStr = document.getElementById("filter_start").value;
+            const endStr = document.getElementById("filter_end").value;
+            const monthStr = document.getElementById("filter_month").value;
+
+            appState.filteredData = appState.rawData.filter((item) => {
+                const itemDate = item.tambat_tali ? String(item.tambat_tali).substring(0, 10) : "";
+
+                if (!itemDate) {
+                    return !(startStr || endStr || monthStr);
+                }
+
+                if (monthStr) {
+                    return itemDate.startsWith(monthStr);
+                }
+
+                if (startStr && itemDate < startStr) return false;
+                if (endStr && itemDate > endStr) return false;
+                return true;
+            });
+
+            renderTable();
+            updateCharts();
+        }
+
+        function resetFilters() {
+            document.getElementById("filter_month").value = "";
+            document.getElementById("filter_start").value = "";
+            document.getElementById("filter_end").value = "";
+            document.getElementById("filter_mode").value = "all";
+            applyFilters();
+        }
+
+        // =========================================================================
+        // 5. RENDER TABEL, KPI & GRAFIK
+        // =========================================================================
+        function buildTableHeaderHTML(mode) {
+            let topRow = `
+                <tr>
+                    <th class="py-3 px-3 text-center border-r border-slate-700" rowspan="2">No</th>
+                    <th class="py-3 px-3 border-r border-slate-700 min-w-[150px]" rowspan="2">Tongkang</th>
+                    <th class="py-3 px-3 border-r border-slate-700 min-w-[120px]" rowspan="2">Tambat Tali</th>
+                    <th class="py-3 px-3 text-right border-r border-slate-700" rowspan="2">Net Inisial</th>
+                    <th class="py-3 px-3 text-right border-r border-slate-700" rowspan="2">Net Final</th>
+                    <th class="py-3 px-3 text-right border-r border-slate-700 bg-emerald-900/40" rowspan="2">Cargo (MT)</th>
+                    <th class="py-3 px-3 text-center border-r border-slate-700" rowspan="2">Ritase</th>`;
+
+            if (mode === "all" || mode === "barging") {
+                topRow += `<th class="py-2 px-3 text-center border-r border-slate-700 bg-indigo-900/40" colspan="3">COA BARGING (%)</th>`;
+            }
+            if (mode === "all" || mode === "discharge") {
+                topRow += `<th class="py-2 px-3 text-center border-r border-slate-700 bg-cyan-900/40" colspan="3">COA DISCHARGE (%)</th>`;
+            }
+
+            topRow += `
+                    <th class="py-3 px-3 border-r border-slate-700 min-w-[120px]" rowspan="2">Lepas Tali</th>
+                    <th class="py-3 px-3 border-r border-slate-700 min-w-[120px]" rowspan="2">Keberangkatan</th>
+                    <th class="py-3 px-3 border-r border-slate-700" rowspan="2">Tujuan</th>
+                </tr>`;
+
+            let subRow = "<tr>";
+            if (mode === "all" || mode === "barging") {
+                subRow += `
+                    <th class="py-1 px-2 text-center bg-indigo-900/40 border-r border-slate-700">Al₂O₃</th>
+                    <th class="py-1 px-2 text-center bg-indigo-900/40 border-r border-slate-700">SiO₂</th>
+                    <th class="py-1 px-2 text-center bg-indigo-900/40 border-r border-slate-700">R-SiO₂</th>`;
+            }
+            if (mode === "all" || mode === "discharge") {
+                subRow += `
+                    <th class="py-1 px-2 text-center bg-cyan-900/40 border-r border-slate-700">Al₂O₃</th>
+                    <th class="py-1 px-2 text-center bg-cyan-900/40 border-r border-slate-700">SiO₂</th>
+                    <th class="py-1 px-2 text-center bg-cyan-900/40 border-r border-slate-700">R-SiO₂</th>`;
+            }
+            subRow += "</tr>";
+
+            return topRow + subRow;
+        }
+
+        function buildTableRowHTML(item, mode) {
+            const noText = (item.no_shipment !== "" && item.no_shipment !== null && item.no_shipment !== undefined)
+                ? `#${item.no_shipment}`
+                : "-";
+            const tongkangText = item.nama_tb_tongkang || "-";
+
+            let row = `<tr class="hover:bg-blue-50/50 bg-white border-b">
+                <td class="py-2 px-3 text-center border-r font-semibold text-slate-700">${noText}</td>
+                <td class="py-2 px-3 border-r font-medium text-slate-800 leading-tight">${tongkangText}</td>
+                <td class="py-2 px-3 border-r text-center">${fmtDateStr(item.tambat_tali)}</td>
+                <td class="py-2 px-3 text-right border-r text-slate-500">${fmtDec(item.net_displacement_initial)}</td>
+                <td class="py-2 px-3 text-right border-r text-slate-500">${fmtDec(item.net_displacement_final)}</td>
+                <td class="py-2 px-3 text-right border-r font-bold text-emerald-700 bg-emerald-50/40">${fmtDec(item.cargo_loaded)}</td>
+                <td class="py-2 px-3 text-center border-r">${item.ritase_dt || "-"}</td>`;
+
+            if (mode === "all" || mode === "barging") {
+                row += `
+                    <td class="py-2 px-2 text-center border-r text-indigo-700 bg-indigo-50/30 font-medium">${fmtDec(item.coa_barging_al2o3)}%</td>
+                    <td class="py-2 px-2 text-center border-r text-indigo-700 bg-indigo-50/30 font-medium">${fmtDec(item.coa_barging_sio2)}%</td>
+                    <td class="py-2 px-2 text-center border-r text-indigo-700 bg-indigo-50/30 font-medium">${fmtDec(item.coa_barging_rsio2)}%</td>`;
+            }
+
+            if (mode === "all" || mode === "discharge") {
+                row += `
+                    <td class="py-2 px-2 text-center border-r text-cyan-700 bg-cyan-50/30 font-medium">${fmtDec(item.coa_discharge_al2o3)}%</td>
+                    <td class="py-2 px-2 text-center border-r text-cyan-700 bg-cyan-50/30 font-medium">${fmtDec(item.coa_discharge_sio2)}%</td>
+                    <td class="py-2 px-2 text-center border-r text-cyan-700 bg-cyan-50/30 font-medium">${fmtDec(item.coa_discharge_rsio2)}%</td>`;
+            }
+
+            row += `
+                <td class="py-2 px-3 border-r text-center">${fmtDateStr(item.lepas_tali)}</td>
+                <td class="py-2 px-3 border-r text-center">${fmtDateStr(item.keberangkatan)}</td>
+                <td class="py-2 px-3 text-slate-600">${item.tujuan || "-"}</td>
+            </tr>`;
+
+            return row;
+        }
+
+        function updateKPISummary(totalCargo, totalRitase, completedCount) {
+            const count = appState.filteredData.length;
+            document.getElementById("stat-total").innerText = count;
+            document.getElementById("stat-tonnage").innerHTML = `${totalCargo.toLocaleString("id-ID", { maximumFractionDigits: 2 })} <span class="text-xs font-normal text-slate-500">MT</span>`;
+            document.getElementById("stat-ritase").innerText = totalRitase;
+            document.getElementById("stat-completed").innerText = completedCount;
+            document.getElementById("record-count").innerText = `${count} Data Ditampilkan`;
+        }
+
+        function renderTable() {
+            const mode = document.getElementById("filter_mode").value;
+            const thead = document.getElementById("table-head");
+            const tbody = document.getElementById("table-body");
+
+            thead.innerHTML = buildTableHeaderHTML(mode);
+
+            let totalCargo = 0;
+            let totalRitase = 0;
+            let completedCount = 0;
+
+            const rowsHTML = appState.filteredData.map((item) => {
+                totalCargo += parseNum(item.cargo_loaded);
+                totalRitase += parseNum(item.ritase_dt);
+                if (item.keberangkatan) completedCount++;
+                return buildTableRowHTML(item, mode);
+            }).join("");
+
+            tbody.innerHTML = rowsHTML;
+            updateKPISummary(totalCargo, totalRitase, completedCount);
+        }
+
+        function renderDraftChart() {
+            const ctx = document.getElementById("draftChart").getContext("2d");
+            if (appState.charts.draft) appState.charts.draft.destroy();
+
+            appState.charts.draft = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: appState.filteredData.map((i) => `${i.no_shipment ? "#" + i.no_shipment : "-"} - ${i.nama_tb_tongkang || "-"}`),
+                    datasets: [{
+                        label: "Cargo Loaded (MT)",
+                        data: appState.filteredData.map((i) => parseNum(i.cargo_loaded)),
+                        backgroundColor: "#10b981"
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function renderCOAChart(mode) {
+            const ctx = document.getElementById("coaChart").getContext("2d");
+            if (appState.charts.coa) appState.charts.coa.destroy();
+
+            const datasets = [];
+            if (mode === "all" || mode === "barging") {
+                datasets.push(
+                    { type: "bar", label: "Barging Al₂O₃", data: appState.filteredData.map((i) => parseNum(i.coa_barging_al2o3)), backgroundColor: "#2563eb" },
+                    { type: "bar", label: "Barging SiO₂", data: appState.filteredData.map((i) => parseNum(i.coa_barging_sio2)), backgroundColor: "#d97706" },
+                    { type: "bar", label: "Barging R-SiO₂", data: appState.filteredData.map((i) => parseNum(i.coa_barging_rsio2)), backgroundColor: "#7c3aed" }
+                );
+            }
+            if (mode === "all" || mode === "discharge") {
+                datasets.push(
+                    { type: "bar", label: "Discharge Al₂O₃", data: appState.filteredData.map((i) => parseNum(i.coa_discharge_al2o3)), backgroundColor: "#60a5fa" },
+                    { type: "bar", label: "Discharge SiO₂", data: appState.filteredData.map((i) => parseNum(i.coa_discharge_sio2)), backgroundColor: "#fbbf24" },
+                    { type: "bar", label: "Discharge R-SiO₂", data: appState.filteredData.map((i) => parseNum(i.coa_discharge_rsio2)), backgroundColor: "#c084fc" }
+                );
+            }
+
+            appState.charts.coa = new Chart(ctx, {
+                data: {
+                    labels: appState.filteredData.map((i) => i.no_shipment ? `#${i.no_shipment}` : (i.nama_tb_tongkang || "-")),
+                    datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: "top", labels: { boxWidth: 12 } } },
+                    scales: { y: { beginAtZero: true, max: 60, title: { display: true, text: "Kadar (%)" } } }
+                }
+            });
+        }
+
+        function updateCharts() {
+            const mode = document.getElementById("filter_mode").value;
+            renderDraftChart();
+            renderCOAChart(mode);
+        }
+
+        // =========================================================================
+        // 6. MODAL & PENGIRIMAN FORM
+        // =========================================================================
+        function openModal() {
+            document.getElementById("dataForm").reset();
+            document.getElementById("cargo_loaded").value = "";
+            const modal = document.getElementById("shipmentModal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        }
+
+        function closeModal() {
+            const modal = document.getElementById("shipmentModal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
+        function collectFormPayload() {
+            const getVal = (id) => {
+                const el = document.getElementById(id);
+                return el ? el.value.trim() : "";
+            };
+
+            return {
+                sheet: APP_CONFIG.sheetName,
+                no_shipment: getVal("no_shipment"),
+                nama_tb_tongkang: getVal("nama_tb_tongkang"),
+                tambat_tali: getVal("tambat_tali"),
+                net_displacement_initial: getVal("net_initial"),
+                net_displacement_final: getVal("net_final"),
+                cargo_loaded: getVal("cargo_loaded"),
+                ritase_dt: getVal("ritase_dt"),
+                coa_barging_al2o3: getVal("coa_b_al"),
+                coa_barging_sio2: getVal("coa_b_si"),
+                coa_barging_rsio2: getVal("coa_b_rsi"),
+                coa_discharge_al2o3: getVal("coa_d_al"),
+                coa_discharge_sio2: getVal("coa_d_si"),
+                coa_discharge_rsio2: getVal("coa_d_rsi"),
+                lepas_tali: getVal("lepas_tali"),
+                keberangkatan: getVal("keberangkatan"),
+                tujuan: getVal("tujuan")
+            };
+        }
+
+        function hasAnyFilledField(payload) {
+            return FORM_FIELD_IDS.some((key) => Boolean(payload[key]));
+        }
+
+        async function saveShipment(event) {
+            if (event && typeof event.preventDefault === "function") {
+                event.preventDefault();
+            }
+
+            if (!APP_CONFIG.gasUrl) {
+                alert("URL Google Apps Script belum diisi pada konfigurasi APP_CONFIG.gasUrl.");
+                return;
+            }
+
+            const payload = collectFormPayload();
+            if (!hasAnyFilledField(payload)) {
+                alert("Isi minimal satu kolom data sebelum mengirim.");
+                return;
+            }
+
+            const submitBtn = document.getElementById("submitShipmentBtn");
+            const originalHTML = submitBtn ? submitBtn.innerHTML : "";
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Mengirim...';
+                submitBtn.disabled = true;
+            }
+
+            try {
+                await postPayloadToGAS(payload);
+                await new Promise((resolve) => setTimeout(resolve, APP_CONFIG.syncDelayMs));
+                await fetchFromGAS();
+                closeModal();
+                alert("Data berhasil dikirim ke Google Sheet.");
+            } catch (err) {
+                console.error("Kesalahan saat mengirim data:", err);
+                alert("Terjadi kesalahan koneksi saat mengirim data.");
+            } finally {
+                if (submitBtn) {
+                    submitBtn.innerHTML = originalHTML;
+                    submitBtn.disabled = false;
+                }
+            }
+        }
+
+        // =========================================================================
+        // 7. EKSPOR & INISIALISASI
+        // =========================================================================
+        function exportExcel() {
+            const ws = XLSX.utils.json_to_sheet(appState.filteredData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Barging");
+            XLSX.writeFile(wb, APP_CONFIG.excelFilename);
+        }
+
+        function saveAsImage() {
+            html2canvas(document.getElementById("capture-area")).then((canvas) => {
+                const link = document.createElement("a");
+                link.download = APP_CONFIG.imageFilename;
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+
+        window.addEventListener("DOMContentLoaded", fetchFromGAS);
+    </script>
+</body>
+</html>
